@@ -30,6 +30,8 @@ Run `/model` to search available models. The picker shows models whose providers
 
 Run `/thinking` to select the thinking level for the current model. Press `Ctrl+S` there to save the startup level. Pi limits the choices to levels supported by the selected model.
 
+Thinking levels are relative requests, not fixed token budgets. Depending on the model and API, Pi sends a level as a named effort, turns reasoning on or off, or converts it to a token budget. `/thinking` and the per-model thinking setting in `/settings` show the provider value when the model maps a level to a different value, and show `Reasoning enabled` when the model declares only one enabled level.
+
 `Ctrl+P` cycles through available models. Use `/scoped-models` to control that cycle and save the selection, or configure model patterns through [Settings](settings.md#model-cycling).
 
 A session records model and thinking-level changes. Resuming the session restores them without changing defaults for new sessions.

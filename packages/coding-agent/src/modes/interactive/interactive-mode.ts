@@ -5182,6 +5182,7 @@ export class InteractiveMode {
 				},
 				(level) => selectLevel(level, true),
 				this.settingsManager.getDefaultThinkingLevel() ?? DEFAULT_THINKING_LEVEL,
+				this.session.model,
 			);
 			return { component: selector, focus: selector };
 		});

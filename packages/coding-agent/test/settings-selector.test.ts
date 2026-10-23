@@ -1,3 +1,4 @@
+import type { Api, Model } from "@earendil-works/pi-ai";
 import { setKeybindings } from "@earendil-works/pi-tui";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { KeybindingsManager } from "../src/core/keybindings.ts";
@@ -164,5 +165,68 @@ describe("SettingsSelectorComponent", () => {
 		output = stripAnsi(list.render(120).join("\n"));
 		expect(output).toContain("  ✓ medium");
 		expect(output).toContain("→   high");
+	});
+
+	it("describes per-model thinking levels from model metadata and saves native level IDs", () => {
+		const testModel = (
+			id: string,
+			overrides: Partial<Model<"openai-responses">> = {},
+		): Model<"openai-responses"> => ({
+			id,
+			name: id,
+			api: "openai-responses",
+			provider: "test",
+			baseUrl: "https://example.invalid",
+			reasoning: true,
+			input: ["text"],
+			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+			contextWindow: 128000,
+			maxTokens: 16384,
+			...overrides,
+		});
+		const openLevelMenu = (model: Model<Api>, overrides: Record<string, string> = {}) => {
+			const onModelThinkingLevelChange = vi.fn();
+			const config = {
+				defaultModel: `${model.provider}/${model.id}`,
+				availableDefaultModels: [model],
+				thinkingLevel: "medium",
+				modelThinkingLevels: overrides,
+			} as unknown as SettingsConfig;
+			const callbacks = { onCancel: () => {}, onModelThinkingLevelChange } as unknown as SettingsCallbacks;
+			const list = new SettingsSelectorComponent(config, callbacks).getSettingsList();
+			list.selectItem("model-thinking");
+			list.handleInput("\r");
+			list.handleInput("\r");
+			return { list, onModelThinkingLevelChange };
+		};
+		const render = (list: ReturnType<typeof openLevelMenu>["list"]) => stripAnsi(list.render(120).join("\n"));
+
+		const remapped = openLevelMenu(
+			testModel("remapped", { thinkingLevelMap: { off: "none", minimal: "low", xhigh: "xhigh" } }),
+			{ "test/remapped": "low" },
+		);
+		let output = render(remapped.list);
+		expect(output).toMatch(/✓ low +Low reasoning\n/);
+		expect(output).toMatch(/ minimal +Minimal reasoning · provider value: low\n/);
+		expect(output).toMatch(/ off +No reasoning · provider value: none\n/);
+		expect(output).toMatch(/ high +High reasoning\n/);
+		expect(output).not.toMatch(/tokens|~\d/);
+		remapped.list.handleInput("\x1b[A");
+		remapped.list.handleInput("\r");
+		expect(remapped.onModelThinkingLevelChange).toHaveBeenCalledWith("test", "remapped", "minimal");
+
+		output = render(
+			openLevelMenu(
+				testModel("switch", { thinkingLevelMap: { minimal: null, low: null, medium: null, high: "enabled" } }),
+			).list,
+		);
+		expect(output).toMatch(/ off +No reasoning\n/);
+		expect(output).toMatch(/ high +Reasoning enabled · provider value: enabled\n/);
+		expect(output).not.toContain(" medium ");
+
+		output = render(openLevelMenu(testModel("custom")).list);
+		expect(output).toMatch(/ medium +Medium reasoning\n/);
+		expect(output).toMatch(/ high +High reasoning\n/);
+		expect(output).not.toMatch(/tokens|~\d/);
 	});
 });

@@ -1,4 +1,5 @@
 import type { ThinkingLevel } from "@earendil-works/pi-agent-core";
+import { type Api, getSupportedThinkingLevels, type Model } from "@earendil-works/pi-ai";
 import {
 	Container,
 	type Focusable,
@@ -22,13 +23,26 @@ const THINKING_SELECT_LIST_LAYOUT: SelectListLayoutOptions = {
 
 const LEVEL_DESCRIPTIONS: Record<ThinkingLevel, string> = {
 	off: "No reasoning",
-	minimal: "Very brief reasoning (~1k tokens)",
-	low: "Light reasoning (~2k tokens)",
-	medium: "Moderate reasoning (~8k tokens)",
-	high: "Deep reasoning (~16k tokens)",
-	xhigh: "Extra-high reasoning (~32k tokens)",
+	minimal: "Minimal reasoning",
+	low: "Low reasoning",
+	medium: "Medium reasoning",
+	high: "High reasoning",
+	xhigh: "Extra-high reasoning",
 	max: "Maximum reasoning",
 };
+
+/**
+ * Describe a thinking level using only the model's metadata. Levels are relative requests, not
+ * token budgets: providers apply them as named efforts, on/off switches, or configured budgets.
+ */
+export function describeThinkingLevel(level: ThinkingLevel, model?: Model<Api>): string {
+	const enabledLevels = model ? getSupportedThinkingLevels(model).filter((candidate) => candidate !== "off") : [];
+	const description = level !== "off" && enabledLevels.length === 1 ? "Reasoning enabled" : LEVEL_DESCRIPTIONS[level];
+	const providerValue = model?.thinkingLevelMap?.[level];
+	return typeof providerValue === "string" && providerValue !== level
+		? `${description} · provider value: ${providerValue}`
+		: description;
+}
 
 /**
  * Component that renders a thinking level selector with borders
@@ -59,18 +73,21 @@ export class ThinkingSelectorComponent extends Container implements Focusable {
 		onCancel: () => void,
 		onSelectAsDefault?: (level: ThinkingLevel) => void,
 		defaultThinkingLevel?: ThinkingLevel,
+		model?: Model<Api>,
 	) {
 		super();
 		this.onSelect = onSelect;
 		this.onCancel = onCancel;
 		this.onSelectAsDefault = onSelectAsDefault;
 
-		this.allItems = availableLevels.map((level) => ({
-			value: level,
-			label: `${level === currentLevel ? "✓ " : "  "}${level}`,
-			description:
-				level === defaultThinkingLevel ? `${LEVEL_DESCRIPTIONS[level]} · default` : LEVEL_DESCRIPTIONS[level],
-		}));
+		this.allItems = availableLevels.map((level) => {
+			const description = describeThinkingLevel(level, model);
+			return {
+				value: level,
+				label: `${level === currentLevel ? "✓ " : "  "}${level}`,
+				description: level === defaultThinkingLevel ? `${description} · default` : description,
+			};
+		});
 
 		// Add top border
 		this.addChild(new DynamicBorder());

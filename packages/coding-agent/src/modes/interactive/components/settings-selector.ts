@@ -35,18 +35,9 @@ import {
 import { DynamicBorder } from "./dynamic-border.ts";
 import { keyDisplayText } from "./keybinding-hints.ts";
 import { SelectSubmenu, SteppedSubmenu, type SteppedSubmenuStep } from "./settings-submenu.ts";
+import { describeThinkingLevel } from "./thinking-selector.ts";
 
 const MODEL_PICKER_LAYOUT = { minPrimaryColumnWidth: 12, maxPrimaryColumnWidth: 46 };
-
-const THINKING_DESCRIPTIONS: Record<ThinkingLevel, string> = {
-	off: "No reasoning",
-	minimal: "Very brief reasoning (~1k tokens)",
-	low: "Light reasoning (~2k tokens)",
-	medium: "Moderate reasoning (~8k tokens)",
-	high: "Deep reasoning (~16k tokens)",
-	xhigh: "Extra-high reasoning (~32k tokens)",
-	max: "Maximum reasoning",
-};
 
 const DEFAULT_PROJECT_TRUST_LABELS: Record<DefaultProjectTrust, string> = {
 	ask: "Ask",
@@ -674,7 +665,7 @@ export class SettingsSelectorComponent extends Container {
 								const items: SelectItem[] = levels.map((level) => ({
 									value: level,
 									label: `${level === activeLevel ? "✓ " : "  "}${level}`,
-									description: THINKING_DESCRIPTIONS[level],
+									description: describeThinkingLevel(level, model),
 								}));
 								if (currentModelThinkingLevels[ctx.model] !== undefined) {
 									items.push({
